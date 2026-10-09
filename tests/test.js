@@ -878,6 +878,21 @@ suite('msgpackr basic tests', function() {
 		var deserialized = unpack(serialized);
 		assert.deepEqual(deserialized, data);
 	});
+	test('negative zero keeps its sign', function(){
+		// `-0 === 0`, so a value that has to survive the round trip as itself needs Object.is
+		assert.isTrue(Object.is(unpack(pack(-0)), -0));
+		assert.isTrue(Object.is(unpack(pack(0)), 0));
+		assert.strictEqual(pack(0).length, 1, "+0 must keep its one-byte encoding");
+
+		var data = { zero: 0, negativeZero: -0 };
+		var deserialized = unpack(pack(data));
+		assert.isTrue(Object.is(deserialized.negativeZero, -0));
+		assert.isTrue(Object.is(deserialized.zero, 0));
+
+		// and whenever the float path is used for other reasons
+		assert.isTrue(Object.is(unpack(pack(-0.0)), -0));
+		assert.isTrue(Object.is(unpack(pack([-0][0])), -0));
+	});
 
 	test('object with __proto__', function(){
 		const data = { foo: 'bar', __proto__: { isAdmin: true } };

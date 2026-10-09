@@ -359,7 +359,11 @@ export class Packr extends Unpackr {
 				}
 				position += length;
 			} else if (type === 'number') {
-				if (value >>> 0 === value) {// positive integer, 32-bit or less
+				// `===` cannot tell -0 from 0, so both integer branches below would drop the sign
+				// (and 0x100 + -0 would even emit the wrong byte). Leaving -0 to the float path
+				// keeps it, which structured cloning relies on. The extra test is a single
+				// integer comparison and only short-circuits to a division for the value 0.
+				if (value >>> 0 === value && (value !== 0 || 1 / value > 0)) {// positive integer, 32-bit or less, excluding -0
 					// positive uint
 					if (value < 0x20 || (value < 0x80 && this.useRecords === false) || (value < 0x40 && !this._writeStruct)) {
 						target[position++] = value;
@@ -375,7 +379,7 @@ export class Packr extends Unpackr {
 						targetView.setUint32(position, value);
 						position += 4;
 					}
-				} else if (value >> 0 === value) { // negative integer
+				} else if (value >> 0 === value && (value !== 0 || 1 / value > 0)) { // negative integer, excluding -0
 					if (value >= -0x20) {
 						target[position++] = 0x100 + value;
 					} else if (value >= -0x80) {
